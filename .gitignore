@@ -1,0 +1,8 @@
+node_modules/
+dist/
+coverage/
+*.js.map
+.DS_Store
+.claude/
+n8n-nodes-apipay-prompts/
+docs/npm-setup.md
