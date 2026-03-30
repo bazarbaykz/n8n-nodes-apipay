@@ -1,0 +1,26 @@
+stages:
+  - test
+  - publish
+
+test:
+  stage: test
+  image: node:lts
+  script:
+    - npm ci
+    - npx n8n-node lint
+    - npm run build
+    - npm test
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == "main"
+
+publish:
+  stage: publish
+  image: node:lts
+  script:
+    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+    - npm ci
+    - npm run build
+    - npm publish --access public
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^\d+\.\d+\.\d+$/
