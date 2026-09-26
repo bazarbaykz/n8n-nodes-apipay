@@ -21,19 +21,39 @@ describe('ApiPayTrigger Node', () => {
 		expect(trigger.description.webhooks![0].httpMethod).toBe('POST');
 	});
 
-	test('should list all 7 event types', () => {
+	test('should offer every event the canon documents', () => {
 		const eventsProperty = trigger.description.properties.find((p) => p.name === 'events');
 		expect(eventsProperty).toBeDefined();
-		expect((eventsProperty as any).options).toHaveLength(7);
 
 		const eventValues = (eventsProperty as any).options.map((o: any) => o.value);
-		expect(eventValues).toContain('invoice.status_changed');
-		expect(eventValues).toContain('invoice.refunded');
-		expect(eventValues).toContain('subscription.payment_succeeded');
-		expect(eventValues).toContain('subscription.payment_failed');
-		expect(eventValues).toContain('subscription.grace_period_started');
-		expect(eventValues).toContain('subscription.expired');
-		expect(eventValues).toContain('webhook.test');
+
+		// The full list as of the canon this node was built against. An event missing here is
+		// not merely absent from the dropdown: with a non-empty selection the node answers 200
+		// and filters it out, so it is unreachable even as raw data.
+		expect(eventValues.sort()).toEqual([
+			'cashbox.shift_close_failed',
+			'cashbox.shift_closed',
+			'catalog.item_processed',
+			'invoice.qr_scanned',
+			'invoice.refunded',
+			'invoice.status_changed',
+			'qr_refund.completed',
+			'qr_refund.execution_uncertain',
+			'qr_refund.expired',
+			'qr_refund.failed',
+			'qr_refund.identified',
+			'receipt.failed',
+			'receipt.issued',
+			'subscription.cancelled',
+			'subscription.created',
+			'subscription.expired',
+			'subscription.grace_period_started',
+			'subscription.paused',
+			'subscription.payment_failed',
+			'subscription.payment_succeeded',
+			'subscription.resumed',
+			'webhook.test',
+		]);
 	});
 
 	// ════════════════════════════════════
@@ -96,7 +116,30 @@ describe('ApiPayTrigger Node', () => {
 			expect(result.workflowData).toBeUndefined();
 		});
 
-		test('should skip verification when webhookSecret is empty', async () => {
+		test('⛔ should refuse an unverifiable event when no secret is set', async () => {
+			const body = { event: 'invoice.status_changed', invoice: { id: 1 } };
+			const rawBody = JSON.stringify(body);
+
+			// The webhook URL is public. Accepting an unsigned body means anyone who knows the
+			// address can post "paid" into the workflow, so a missing secret is a refusal by
+			// default rather than a silent pass.
+			const mockFn = createMockWebhookFunctions(
+				body,
+				{},
+				rawBody,
+				{ events: [], webhookSecret: '' },
+			);
+
+			const result = await trigger.webhook.call(mockFn);
+
+			expect(result.workflowData).toBeUndefined();
+			expect(result.webhookResponse).toEqual({
+				status: 403,
+				body: { error: 'Webhook secret is not configured' },
+			});
+		});
+
+		test('should accept an unsigned event only when the check is turned off explicitly', async () => {
 			const body = { event: 'invoice.status_changed', invoice: { id: 1 } };
 			const rawBody = JSON.stringify(body);
 
@@ -104,7 +147,7 @@ describe('ApiPayTrigger Node', () => {
 				body,
 				{},
 				rawBody,
-				{ events: [], webhookSecret: '' },
+				{ events: [], webhookSecret: '', requireSignature: false },
 			);
 
 			const result = await trigger.webhook.call(mockFn);

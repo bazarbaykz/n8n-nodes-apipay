@@ -5,9 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![n8n community](https://img.shields.io/badge/n8n-community%20node-orange)](https://n8n.io)
 
-This is an n8n community node for [ApiPay.kz](https://apipay.kz) — a Kaspi Pay payment gateway for Kazakhstan.
+This is an n8n community node for [ApiPay.kz](https://apipay.kz) — an independent service that works on top of your own Kaspi Pay account in Kazakhstan. ApiPay is not an official Kaspi integration and not a Kaspi partner: it issues and tracks invoices through the standard "Cashier" role of Kaspi Pay.
 
-It allows you to create and manage invoices, refunds, subscriptions, and catalog items through the ApiPay.kz API directly in your n8n workflows.
+It lets you issue and track invoices, refunds, subscriptions, fiscal receipts, printable QR sheets and cash shifts through the ApiPay.kz API directly in your n8n workflows.
 
 [n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/reference/license/) workflow automation platform.
 
@@ -21,53 +21,28 @@ You need an ApiPay.kz account to use this node:
 
 1. Register at [apipay.kz](https://apipay.kz)
 2. Get your API Key from the dashboard
-3. (Optional) Get Webhook Secret for the Trigger node
+3. Generate a Webhook Secret next to the notification address — needed by the Trigger node and
+   shown only once
 4. In n8n, create new ApiPay API credentials with your API Key
 
 ## Operations
 
-### Invoice
-- **Create** — Create a new Kaspi Pay invoice
-- **Get** — Get invoice details by ID
-- **Get Many** — List invoices with filters (status, date, search)
-- **Cancel** — Cancel a pending invoice
-- **Check Status** — Batch check statuses for up to 100 invoices
+The node covers 67 API operations across 12 resources: Invoice, Refund, QR Refund, Subscription,
+Catalog, Receipt, Static QR, Cashbox, Client, Webhook Log, Account and Status. The exact list,
+with a hint on every field, is in the node itself; the API reference is at
+[apipay.kz/docs](https://apipay.kz/docs).
 
-### Refund
-- **Create** — Create a full or partial refund
-- **Get** — Get refund details by ID
-- **Get Many** — List refunds with filters
-- **Get by Invoice** — Get all refunds for a specific invoice
-
-### Subscription
-- **Create** — Create a recurring payment subscription
-- **Get** — Get subscription details
-- **Get Many** — List subscriptions with filters
-- **Update** — Update subscription parameters
-- **Pause** — Pause an active subscription
-- **Resume** — Resume a paused subscription
-- **Cancel** — Permanently cancel a subscription
-- **Get Invoices** — Get all invoices for a subscription
-
-### Catalog
-- **Get Units** — Get available measurement units
-- **Get Many** — List catalog items
-- **Create** — Batch create catalog items (up to 50)
-- **Upload Image** — Upload an image for catalog items
-- **Update** — Update a catalog item
-- **Delete** — Delete a catalog item
-
-### Status
-- **Health Check** — Check API availability
+Connecting a Kaspi Pay cashier is deliberately not among them: it needs an SMS code sent to the
+employee's phone, so it is done by a person in the ApiPay dashboard.
 
 ### ApiPay Trigger
-Receives webhook events from ApiPay.kz with HMAC-SHA256 signature verification:
-- Invoice status changed
-- Invoice refunded
-- Subscription payment succeeded/failed
-- Subscription grace period started
-- Subscription expired
-- Webhook test
+
+Receives all 22 ApiPay webhook events — invoices, refunds, QR refunds, subscriptions, fiscal
+receipts, cash shifts and catalog intake — and verifies the HMAC-SHA256 signature itself.
+
+⛔ Signature verification is on by default and the node refuses events it cannot verify. Set the
+webhook secret in the credential: the webhook URL is public, so without a signature anyone who
+knows the address can post a "paid" event into your workflow.
 
 ## Compatibility
 

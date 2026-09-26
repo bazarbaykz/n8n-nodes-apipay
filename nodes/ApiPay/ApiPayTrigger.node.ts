@@ -14,9 +14,12 @@ export class ApiPayTrigger implements INodeType {
 		icon: 'file:apipay.svg',
 		group: ['trigger'],
 		version: 1,
-		subtitle: '={{$parameter["events"].join(", ")}}',
+		subtitle: '={{($parameter["events"] || []).join(", ")}}',
 		description: 'Starts the workflow when ApiPay.kz webhook events occur',
 		defaults: { name: 'ApiPay Trigger' },
+		// The linter requires this property on every node class and its type accepts only
+		// `true`. A trigger is not actually callable by an agent — it fires on an incoming
+		// webhook — so the value carries no meaning here beyond satisfying the rule.
 		usableAsTool: true,
 		inputs: [],
 		outputs: ['main'],
@@ -44,6 +47,26 @@ export class ApiPayTrigger implements INodeType {
 				description: 'Which events to listen for',
 				options: [
 					{
+						name: 'Cashbox Shift Close Failed',
+						value: 'cashbox.shift_close_failed',
+						description: 'When closing a cash shift did not go through',
+					},
+					{
+						name: 'Cashbox Shift Closed',
+						value: 'cashbox.shift_closed',
+						description: 'When a cash shift has been closed',
+					},
+					{
+						name: 'Catalog Item Processed',
+						value: 'catalog.item_processed',
+						description: 'When one catalog position finished intake. Note these deliveries have their own log with a 3-day rotation.',
+					},
+					{
+						name: 'Invoice QR Scanned',
+						value: 'invoice.qr_scanned',
+						description: 'When the customer scanned a QR invoice. ⚠️ This does NOT change the invoice status — the status in the payload is whatever it was when the event was sent.',
+					},
+					{
 						name: 'Invoice Refunded',
 						value: 'invoice.refunded',
 						description: 'When an invoice is fully or partially refunded',
@@ -51,7 +74,52 @@ export class ApiPayTrigger implements INodeType {
 					{
 						name: 'Invoice Status Changed',
 						value: 'invoice.status_changed',
-						description: 'When an invoice status changes (e.g., pending → paid)',
+						description: 'When an invoice reaches a notifiable status. ⚠️ The status is set by Kaspi, and cancelled → paid or expired → paid are valid sequences: do not close an order on a local timeout alone.',
+					},
+					{
+						name: 'QR Refund Completed',
+						value: 'qr_refund.completed',
+						description: 'When a QR refund went through and is proven',
+					},
+					{
+						name: 'QR Refund Execution Uncertain',
+						value: 'qr_refund.execution_uncertain',
+						description: '⛔ When the outcome of a refund is NOT proven — Kaspi may already have moved the money. Do not retry on this event: take the session to support.',
+					},
+					{
+						name: 'QR Refund Expired',
+						value: 'qr_refund.expired',
+						description: 'When a refund link is used up: its window closed without a retry, the last window was missed, the link expired or it was revoked',
+					},
+					{
+						name: 'QR Refund Failed',
+						value: 'qr_refund.failed',
+						description: 'When Kaspi refused the refund. The real reason is in error_code; the money did not move.',
+					},
+					{
+						name: 'QR Refund Identified',
+						value: 'qr_refund.identified',
+						description: 'When the customer confirmed who they are on the refund link',
+					},
+					{
+						name: 'Receipt Failed',
+						value: 'receipt.failed',
+						description: 'When a fiscal receipt could not be punched',
+					},
+					{
+						name: 'Receipt Issued',
+						value: 'receipt.issued',
+						description: 'When a fiscal receipt has been punched',
+					},
+					{
+						name: 'Subscription Cancelled',
+						value: 'subscription.cancelled',
+						description: 'When a subscription is cancelled',
+					},
+					{
+						name: 'Subscription Created',
+						value: 'subscription.created',
+						description: 'When a subscription is created',
 					},
 					{
 						name: 'Subscription Expired',
@@ -64,6 +132,11 @@ export class ApiPayTrigger implements INodeType {
 						description: 'When a subscription enters grace period after failed payment',
 					},
 					{
+						name: 'Subscription Paused',
+						value: 'subscription.paused',
+						description: 'When a subscription is paused',
+					},
+					{
 						name: 'Subscription Payment Failed',
 						value: 'subscription.payment_failed',
 						description: 'When a subscription payment fails',
@@ -74,11 +147,23 @@ export class ApiPayTrigger implements INodeType {
 						description: 'When a subscription payment is successfully processed',
 					},
 					{
+						name: 'Subscription Resumed',
+						value: 'subscription.resumed',
+						description: 'When a subscription is resumed',
+					},
+					{
 						name: 'Webhook Test',
 						value: 'webhook.test',
-						description: 'Test event sent from ApiPay dashboard',
+						description: 'Test event sent from the ApiPay dashboard',
 					},
 				],
+			},
+			{
+				displayName: 'Require Signature',
+				name: 'requireSignature',
+				type: 'boolean',
+				default: true,
+				description: 'Whether to reject events that cannot be verified. ⛔ Leaving this off on a public webhook URL lets anyone POST a "paid" event to your workflow. Set the webhook secret in the credential — the ApiPay dashboard generates it next to the notification address.',
 			},
 		],
 	};
@@ -90,6 +175,17 @@ export class ApiPayTrigger implements INodeType {
 
 		const credentials = await this.getCredentials('apiPayApi');
 		const webhookSecret = credentials.webhookSecret as string;
+
+		const requireSignature = this.getNodeParameter('requireSignature', true) as boolean;
+
+		// With no secret there is nothing to verify. Accepting such a request silently is not an
+		// option: the webhook URL is public, and anyone could post "paid".
+		if (requireSignature && !webhookSecret) {
+			return {
+				webhookResponse: { status: 403, body: { error: 'Webhook secret is not configured' } },
+				workflowData: undefined,
+			};
+		}
 
 		if (webhookSecret) {
 			if (!signature) {

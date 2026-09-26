@@ -1,4 +1,5 @@
 import { ApiPayApi } from '../credentials/ApiPayApi.credentials';
+import { API_BASE_URL } from '../nodes/ApiPay/constants';
 
 describe('ApiPayApi Credentials', () => {
 	let credentials: ApiPayApi;
@@ -23,8 +24,8 @@ describe('ApiPayApi Credentials', () => {
 		expect(credentials.icon).toBe('file:apipay.svg');
 	});
 
-	test('should define 3 properties', () => {
-		expect(credentials.properties).toHaveLength(3);
+	test('should define exactly the two fields the node reads', () => {
+		expect(credentials.properties.map((p) => p.name)).toEqual(['apiKey', 'webhookSecret']);
 	});
 
 	describe('properties', () => {
@@ -43,17 +44,11 @@ describe('ApiPayApi Credentials', () => {
 			expect(secret!.typeOptions).toEqual({ password: true });
 		});
 
-		test('should have environment property with options', () => {
-			const env = credentials.properties.find((p) => p.name === 'environment');
-			expect(env).toBeDefined();
-			expect(env!.type).toBe('options');
-			expect(env!.default).toBe('sandbox');
-			expect((env as any).options).toEqual(
-				expect.arrayContaining([
-					expect.objectContaining({ value: 'production' }),
-					expect.objectContaining({ value: 'sandbox' }),
-				]),
-			);
+		test('⛔ should NOT offer an environment selector', () => {
+			// A field named "Environment", defaulting to "Sandbox", used to sit here doing
+			// nothing: sandbox is a property of the organisation behind the API key. A production
+			// key with the selector on "Sandbox" billed real customers who looked like test data.
+			expect(credentials.properties.find((p) => p.name === 'environment')).toBeUndefined();
 		});
 	});
 
@@ -74,7 +69,7 @@ describe('ApiPayApi Credentials', () => {
 		test('should test with GET /invoices?per_page=1', () => {
 			expect(credentials.test).toEqual({
 				request: {
-					baseURL: 'https://bpapi.bazarbay.site/api/v1',
+					baseURL: API_BASE_URL,
 					url: '/invoices',
 					qs: { per_page: '1' },
 					method: 'GET',

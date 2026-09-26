@@ -1,0 +1,36 @@
+# Deliberate differences between this node and the ApiPay API contract.
+#
+# The format is a flat map of `key: reason`. The key is either a contract operation written as
+# `METHOD /path` (path parameters spelled `{}`) or a webhook event name. The reason is required:
+# an empty one here would not mean "not done yet", it means "looked at it and decided against".
+#
+# The gate complains about an omission that no longer omits anything — stale entries are to be
+# deleted, not collected.
+
+# ── Connecting a cashier: deliberately out of scope ──────────────────────────
+# Linking a Kaspi cashier means entering a phone number, receiving an SMS code and confirming
+# as a human being. There is nothing here for automation to do: the one-time code goes to the
+# owner of the phone, not into a workflow. The wizard lives in the dashboard —
+# https://apipay.kz/connect-cashier
+"GET /connections": connecting a cashier is done by a person in the dashboard, not by a workflow
+"POST /connections": connecting a cashier is done by a person in the dashboard, not by a workflow
+"PUT /connections/{}": connecting a cashier is done by a person in the dashboard, not by a workflow
+"DELETE /connections/{}": connecting a cashier is done by a person in the dashboard, not by a workflow
+"POST /connections/{}/primary": connecting a cashier is done by a person in the dashboard, not by a workflow
+"POST /connections/{}/auth/init": a step of cashier authorisation, needs a human being
+"POST /connections/{}/auth/send-phone": a step of cashier authorisation, needs a human being
+"POST /connections/{}/auth/verify-otp": the SMS code goes to the phone owner, not into a workflow
+"POST /connections/{}/auth/logout": a step of cashier authorisation, needs a human being
+"GET /connections/{}/auth/status": the link status is visible in the dashboard; no node needed
+
+# ── QR refund: the immediate start ───────────────────────────────────────────
+# `POST /qr-refunds` is marked deprecated in the contract and kept only for compatibility. It
+# shows the refund QR on the cashier's screen, and the scan window is at most 90 seconds: the
+# customer is usually not standing there, and has nothing to scan someone else's screen with.
+# A workflow cannot hold 90 seconds of human interaction either. The working path is Create Link.
+"POST /qr-refunds": deprecated in the contract; a 90-second window makes the at-the-till scenario unworkable
+
+# ── Gaps in the spec ─────────────────────────────────────────────────────────
+# The node calls an endpoint the published spec does not describe. The API serves it; the spec
+# has not caught up. Remove the line once it is documented.
+"GET /refunds/{}": served by the API but absent from the published spec — a spec gap, not a node bug

@@ -1,4 +1,5 @@
 import type { IExecuteFunctions, IWebhookFunctions } from 'n8n-workflow';
+import { API_BASE_URL } from '../nodes/ApiPay/constants';
 
 export function createMockExecuteFunctions(params: Record<string, any> = {}): IExecuteFunctions {
 	return {
@@ -56,8 +57,8 @@ export function createMockWebhookFunctions(
 	} as unknown as IWebhookFunctions;
 }
 
-export const BASE_URL = 'https://bpapi.bazarbay.site';
-export const API_PATH = '/api/v1';
+export const BASE_URL = new URL(API_BASE_URL).origin;
+export const API_PATH = new URL(API_BASE_URL).pathname;
 
 export function generateSignature(body: string, secret: string): string {
 	const { createHmac } = require('crypto');
