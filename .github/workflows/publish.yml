@@ -19,14 +19,20 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          # Trusted publishing needs Node >= 22.14.0 and npm >= 11.5.1. `lts/*` satisfies the
-          # first but ships npm 10.x, so npm is upgraded below — without it the publish falls
-          # back to looking for a token and fails with ENEEDAUTH.
-          node-version: '22.14.0'
+          # Trusted publishing needs Node >= 22.14.0 and npm >= 11.5.1. The bundled npm is 10.x,
+          # so it is upgraded below — without that the publish falls back to looking for a token
+          # and fails with ENEEDAUTH.
+          #
+          # The major is pinned rather than the exact patch: pinning 22.14.0 exactly made
+          # `npm@latest` (12.x, which wants node ^22.22.2) refuse to install with EBADENGINE.
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
+      # Bounded to 11.x on purpose. `npm@latest` chases majors and each new one raises its Node
+      # floor, so it breaks this job on a schedule nobody controls. 11.5.1 is the version that
+      # introduced trusted publishing, and that is all this job needs.
       - name: Upgrade npm for trusted publishing
-        run: npm install -g npm@latest
+        run: npm install -g npm@^11.5.1
 
       - name: Install dependencies
         run: npm ci
