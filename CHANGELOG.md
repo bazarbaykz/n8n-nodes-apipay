@@ -35,7 +35,8 @@ Everything `@n8n/scan-community-package` flags, so the node can go in for verifi
 - **The `Environment` field is gone from the credential.** It was never read. Sandbox is a
   property of the organisation behind the API key and is switched in the ApiPay dashboard, so
   a selector reading "Sandbox" next to a production key only created a false sense of safety.
-  Use **Account → Get Health** to see which mode a key works in.
+  Which mode a key works in shows up as `is_sandbox` on the invoice and in the webhook body.
+  (0.2.0 said to use Account → Get Health for this; that operation does not report it.)
 
 ### Added
 

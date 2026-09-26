@@ -17,7 +17,8 @@ export class ApiPayApi implements ICredentialType {
   // it was named "Environment", defaulted to "Sandbox" and promised to switch environments,
   // while sandbox is a property of the organisation behind the API key and is switched in the
   // ApiPay dashboard. A production key with the selector on "Sandbox" billed real customers
-  // who looked like test data. Which mode a key works in is visible via Account → Get Health.
+  // who looked like test data. Which mode a key works in shows up as `is_sandbox` on the
+  // invoice and in the webhook body — Account → Get Health does NOT report it.
   properties: INodeProperties[] = [
     {
       displayName: 'API Key',

@@ -1969,7 +1969,7 @@ export class ApiPay implements INodeType {
 						type: 'fixedCollection',
 						typeOptions: { multipleValues: true },
 						default: {},
-						description: 'Positions from the synced catalog. Required for merchants who have a catalog — such an organisation cannot issue a QR invoice with a bare amount.',
+						description: 'Positions from the synced catalog. Required for merchants who have a catalog — such an organisation cannot issue a printed sheet with a bare amount.',
 						options: [
 							{
 								displayName: 'Item',
