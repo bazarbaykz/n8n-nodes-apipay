@@ -3,6 +3,26 @@
 All notable changes to this node are documented here. The node follows the ApiPay API
 contract; `npm run canon:check` verifies that it has not fallen behind.
 
+## 0.2.1
+
+Everything `@n8n/scan-community-package` flags, so the node can go in for verification.
+
+### Added
+
+- Codex files for both nodes: the Finance & Accounting category and documentation links. Without
+  them the node lands in no category in the nodes panel and shows up thinner in the n8n catalogue.
+- `webhookMethods` on the trigger, plus a notice at the top of the node telling you to paste the
+  webhook URL into the ApiPay dashboard. ApiPay registers webhooks nowhere — the notification
+  address belongs to the API key and is set by hand once — so the methods carry the only honest
+  semantics available and the instruction is given to the person rather than swallowed.
+
+### Fixed
+
+- `NodeConnectionTypes.Main` instead of the string literal `'main'` in inputs and outputs.
+- Raw errors are never re-thrown: everything goes out as a `NodeApiError` carrying the item index.
+- `usableAsTool` is gone from the trigger. A trigger cannot be invoked as an AI tool, and keeping
+  the property only cluttered the tool picker.
+
 ## 0.2.0
 
 ### Breaking

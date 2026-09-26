@@ -11,6 +11,7 @@ export default [
 			// not part of it: `files` ships only `dist`. The package-hygiene test has to read the
 			// tarball, which needs fs, path and child_process.
 			'@n8n/community-nodes/no-restricted-imports': 'off',
+			'@n8n/community-nodes/no-dangerous-functions': 'off',
 		},
 	},
 ];

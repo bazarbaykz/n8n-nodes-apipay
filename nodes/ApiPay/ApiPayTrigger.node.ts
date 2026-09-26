@@ -1,10 +1,12 @@
 import type {
+	IHookFunctions,
 	IWebhookFunctions,
 	IWebhookResponseData,
 	INodeType,
 	INodeTypeDescription,
 	IDataObject,
 } from 'n8n-workflow';
+import { NodeConnectionTypes } from 'n8n-workflow';
 import { createHmac, timingSafeEqual } from 'crypto';
 
 export class ApiPayTrigger implements INodeType {
@@ -17,12 +19,8 @@ export class ApiPayTrigger implements INodeType {
 		subtitle: '={{($parameter["events"] || []).join(", ")}}',
 		description: 'Starts the workflow when ApiPay.kz webhook events occur',
 		defaults: { name: 'ApiPay Trigger' },
-		// The linter requires this property on every node class and its type accepts only
-		// `true`. A trigger is not actually callable by an agent — it fires on an incoming
-		// webhook — so the value carries no meaning here beyond satisfying the rule.
-		usableAsTool: true,
 		inputs: [],
-		outputs: ['main'],
+		outputs: [NodeConnectionTypes.Main],
 		credentials: [
 			{
 				name: 'apiPayApi',
@@ -38,6 +36,13 @@ export class ApiPayTrigger implements INodeType {
 			},
 		],
 		properties: [
+			{
+				displayName:
+					'Copy the Webhook URL above into the ApiPay dashboard: Settings → Connection → your API key → notification address. ApiPay has no API for registering it, so this step is done by hand once per key. Generate the webhook secret there too and put it in the credential.',
+				name: 'setupNotice',
+				type: 'notice',
+				default: '',
+			},
 			{
 				displayName: 'Events',
 				name: 'events',
@@ -166,6 +171,34 @@ export class ApiPayTrigger implements INodeType {
 				description: 'Whether to reject events that cannot be verified. ⛔ Leaving this off on a public webhook URL lets anyone POST a "paid" event to your workflow. Set the webhook secret in the credential — the ApiPay dashboard generates it next to the notification address.',
 			},
 		],
+	};
+
+	/**
+	 * ApiPay registers webhooks nowhere: the notification address belongs to the API key and is
+	 * set once in the dashboard, and the public API exposes no endpoint to read or change it.
+	 * There is therefore no call to make from here — but n8n requires the three methods, and
+	 * leaving them out is what its own rule for community nodes flags.
+	 *
+	 * So they are implemented with the only honest semantics available, and the person is told
+	 * what to do by the notice at the top of the node rather than by a silent no-op.
+	 */
+	webhookMethods = {
+		default: {
+			/** Cannot be answered: nothing reports the address of a key. */
+			async checkExists(this: IHookFunctions): Promise<boolean> {
+				return false;
+			},
+
+			/** Nothing to create. The address is pasted into the dashboard by hand. */
+			async create(this: IHookFunctions): Promise<boolean> {
+				return true;
+			},
+
+			/** Nothing was registered from here, so nothing is removed. */
+			async delete(this: IHookFunctions): Promise<boolean> {
+				return true;
+			},
+		},
 	};
 
 	async webhook(this: IWebhookFunctions): Promise<IWebhookResponseData> {

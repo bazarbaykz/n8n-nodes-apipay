@@ -9,7 +9,7 @@ import type {
 	IHttpRequestOptions,
 	JsonObject,
 } from 'n8n-workflow';
-import { NodeApiError } from 'n8n-workflow';
+import { NodeApiError, NodeConnectionTypes } from 'n8n-workflow';
 
 import { API_BASE_URL } from './constants';
 
@@ -201,8 +201,8 @@ export class ApiPay implements INodeType {
 		description: 'Interact with ApiPay.kz Kaspi Pay API',
 		defaults: { name: 'ApiPay' },
 		usableAsTool: true,
-		inputs: ['main'],
-		outputs: ['main'],
+		inputs: [NodeConnectionTypes.Main],
+		outputs: [NodeConnectionTypes.Main],
 		credentials: [{ name: 'apiPayApi', required: true }],
 		properties: [
 			// ──────────────────────────────────────
@@ -4157,9 +4157,8 @@ export class ApiPay implements INodeType {
 							'Kaspi may already have moved the money. Do not re-run this node: a second attempt can refund twice. Read the session with QR Refund → Get and take it to support.',
 					});
 				}
-				if (error instanceof NodeApiError) {
-					throw error;
-				}
+				// Always wrapped, never re-thrown raw: an unwrapped error loses the node and the
+				// item it came from, and n8n's own rule for community nodes forbids it.
 				throw new NodeApiError(this.getNode(), error as JsonObject, { itemIndex: i });
 			}
 		}
