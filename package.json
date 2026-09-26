@@ -23,7 +23,8 @@
     "webhook"
   ],
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "n8n-node build",
